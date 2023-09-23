@@ -23,6 +23,7 @@ from pandas.testing import assert_frame_equal
 
 from pydruid.query import Query, QueryBuilder
 from pydruid.utils import aggregators, filters, having, postaggregator
+from pydruid.utils.dimensions import DimensionSpec
 
 
 def create_query_with_results():
@@ -95,6 +96,75 @@ class TestQueryBuilder:
                 "filter": filters.Dimension("one") == 1,
                 "having": having.Aggregation("sum") > 1,
                 "new_key": "value",
+            },
+        )
+
+        # then
+        assert query.query_dict == expected_query_dict
+
+    def test_build_doubles_sketch_query(self):
+        # given
+        expected_query_dict = {
+            "queryType": "groupBy",
+            "dataSource": {"type": "table", "name": "rum-perf-metrics"},
+            "intervals": {
+                "type": "intervals",
+                "intervals": ["2023-09-21T23:27:25.820Z/2023-09-21T23:27:25.820Z"],
+            },
+            "aggregations": [
+                {
+                    "type": "quantilesDoublesSketch",
+                    "name": "valuesDoublesSketch",
+                    "fieldName": "valuesDoublesSketch",
+                    "k": 256,
+                    "maxStreamLength": 1000000000,
+                }
+            ],
+            "postAggregations": [
+                {
+                    "type": "quantilesDoublesSketchToQuantile",
+                    "name": "fooPostAgg",
+                    "field": {
+                        "type": "fieldAccess",
+                        "fieldName": "valuesDoublesSketch",
+                    },
+                    "fraction": 0.9,
+                }
+            ],
+            "filter": {"type": "selector", "dimension": "dim1", "value": "filterMe"},
+            "granularity": "all",
+            "dimensions": [
+                {"type": "default", "dimension": "dim1", "outputName": "dim1"},
+                {"type": "default", "dimension": "env", "outputName": "env"},
+            ],
+        }
+
+        builder = QueryBuilder()
+
+        # when
+        query = builder.build_query(
+            "groupBy",
+            {
+                "datasource": "rum-perf-metrics",
+                "intervals": ["2023-09-21T23:27:25.820Z/2023-09-21T23:27:25.820Z"],
+                "aggregations": {
+                    "valuesDoublesSketch": aggregators.quantilesdoublessketch(
+                        "valuesDoublesSketch", "fooAgg", 256
+                    )
+                },
+                "post_aggregations": {
+                    "fooPostAgg": postaggregator.QuantilesDoublesSketchToQuantile(
+                        output_name="fooPostAgg",
+                        field=postaggregator.Field("valuesDoublesSketch"),
+                        fraction=0.9,
+                    )
+                },
+                "filter": filters.Dimension("dim1") == "filterMe",
+                "granularity": "all",
+                "dimensions": [
+                    DimensionSpec(dimension="dim1", output_name="dim1"),
+                    DimensionSpec(dimension="env", output_name="env"),
+                ],
             },
         )
 
