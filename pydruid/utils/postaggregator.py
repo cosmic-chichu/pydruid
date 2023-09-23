@@ -220,3 +220,22 @@ class ThetaSketchEstimate(Postaggregator):
             "field": field,
         }
         self.name = "thetasketchestimate"
+
+
+class QuantilesDoublesSketchToQuantile(Postaggregator):
+    def __init__(self, field: Field, fraction: float, output_name=None):
+
+        if output_name is None:
+            name = "quantilesDoublesSketchToQuantile"
+        else:
+            name = output_name
+
+        Postaggregator.__init__(self, None, None, name)
+        self.field = field
+        self.fraction = fraction
+        self.post_aggregator = {
+            "type": "quantilesDoublesSketchToQuantile",
+            "name": name,
+            "field": self.field.post_aggregator,
+            "fraction": self.fraction,
+        }

@@ -25,6 +25,18 @@ def thetasketch(raw_column, isinputthetasketch=False, size=16384):
     }
 
 
+def quantilesdoublessketch(
+    raw_column, aggregator_name, k=128, max_stream_length=1000000000
+):
+    return {
+        "type": "quantilesDoublesSketch",
+        "name": aggregator_name,
+        "fieldName": raw_column,
+        "k": k,
+        "maxStreamLength": max_stream_length,
+    }
+
+
 def min(raw_metric):
     """
     .. note:: Deprecated use `longMin`, `doubleMin' instead
